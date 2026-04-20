@@ -239,7 +239,7 @@ int object_read(const ObjectID *id, ObjectType *type_out, void **data_out, size_
     }
     rewind(f);
 
-    uint8_t *buffer = malloc((size_t)file_size);
+    uint8_t *buffer = malloc(file_size ? (size_t)file_size : 1);
     if (!buffer) {
         fclose(f);
         return -1;
