@@ -146,6 +146,53 @@ static int add_tree_entry(Tree *tree, uint32_t mode, const char *name, const Obj
     return 0;
 }
 
+static int write_tree_level(const Index *index, const char *prefix, ObjectID *id_out) {
+    Tree tree;
+    tree.count = 0;
+    size_t prefix_len = strlen(prefix);
+
+    for (int i = 0; i < index->count; i++) {
+        const char *path = index->entries[i].path;
+        if (strncmp(path, prefix, prefix_len) != 0) continue;
+
+        const char *rest = path + prefix_len;
+        if (rest[0] == '\0') continue;
+
+        const char *slash = strchr(rest, '/');
+        if (!slash) {
+            if (add_tree_entry(&tree, index->entries[i].mode, rest, &index->entries[i].hash) != 0) {
+                return -1;
+            }
+            continue;
+        }
+
+        char dirname[256];
+        size_t dirname_len = (size_t)(slash - rest);
+        if (dirname_len == 0 || dirname_len >= sizeof(dirname)) return -1;
+        memcpy(dirname, rest, dirname_len);
+        dirname[dirname_len] = '\0';
+
+        if (tree_has_entry(&tree, dirname)) continue;
+
+        char child_prefix[512];
+        int n = snprintf(child_prefix, sizeof(child_prefix), "%s%.*s/",
+                         prefix, (int)dirname_len, rest);
+        if (n < 0 || (size_t)n >= sizeof(child_prefix)) return -1;
+
+        ObjectID child_id;
+        if (write_tree_level(index, child_prefix, &child_id) != 0) return -1;
+        if (add_tree_entry(&tree, MODE_DIR, dirname, &child_id) != 0) return -1;
+    }
+
+    void *data = NULL;
+    size_t len = 0;
+    if (tree_serialize(&tree, &data, &len) != 0) return -1;
+
+    int rc = object_write(OBJ_TREE, data, len, id_out);
+    free(data);
+    return rc;
+}
+
 // Serialize a Tree struct into binary format for storage.
 // Caller must free(*data_out).
 // Returns 0 on success, -1 on error.
