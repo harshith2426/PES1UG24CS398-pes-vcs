@@ -117,9 +117,29 @@ static int object_type_from_name(const char *name, ObjectType *type_out) {
 //
 // Returns 0 on success, -1 on error.
 int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out) {
-    // TODO: Implement
-    (void)type; (void)data; (void)len; (void)id_out;
-    return -1;
+    const char *type_name = object_type_name(type);
+    if (!type_name || !id_out || (!data && len > 0)) return -1;
+
+    char header[64];
+    int header_len = snprintf(header, sizeof(header), "%s %zu", type_name, len);
+    if (header_len < 0 || (size_t)header_len + 1 > sizeof(header)) return -1;
+
+    size_t full_len = (size_t)header_len + 1 + len;
+    uint8_t *full = malloc(full_len);
+    if (!full) return -1;
+
+    memcpy(full, header, (size_t)header_len);
+    full[header_len] = '\0';
+    if (len > 0) memcpy(full + header_len + 1, data, len);
+
+    compute_hash(full, full_len, id_out);
+    if (object_exists(id_out)) {
+        free(full);
+        return 0;
+    }
+
+    free(full);
+    return 0;
 }
 
 // Read an object from the store.
