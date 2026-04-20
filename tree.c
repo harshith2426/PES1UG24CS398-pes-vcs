@@ -127,6 +127,25 @@ static int load_index_entries_for_tree(Index *index) {
     return 0;
 }
 
+static int tree_has_entry(const Tree *tree, const char *name) {
+    for (int i = 0; i < tree->count; i++) {
+        if (strcmp(tree->entries[i].name, name) == 0) return 1;
+    }
+    return 0;
+}
+
+static int add_tree_entry(Tree *tree, uint32_t mode, const char *name, const ObjectID *hash) {
+    if (tree->count >= MAX_TREE_ENTRIES || strlen(name) >= sizeof(tree->entries[0].name)) {
+        return -1;
+    }
+
+    TreeEntry *entry = &tree->entries[tree->count++];
+    entry->mode = mode;
+    entry->hash = *hash;
+    snprintf(entry->name, sizeof(entry->name), "%s", name);
+    return 0;
+}
+
 // Serialize a Tree struct into binary format for storage.
 // Caller must free(*data_out).
 // Returns 0 on success, -1 on error.
