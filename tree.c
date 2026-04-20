@@ -86,6 +86,47 @@ static int compare_tree_entries(const void *a, const void *b) {
     return strcmp(((const TreeEntry *)a)->name, ((const TreeEntry *)b)->name);
 }
 
+static int load_index_entries_for_tree(Index *index) {
+    index->count = 0;
+
+    FILE *f = fopen(INDEX_FILE, "r");
+    if (!f) return 0;
+
+    char line[2048];
+    while (fgets(line, sizeof(line), f)) {
+        if (index->count >= MAX_INDEX_ENTRIES) {
+            fclose(f);
+            return -1;
+        }
+
+        IndexEntry *entry = &index->entries[index->count];
+        char hash_hex[HASH_HEX_SIZE + 1];
+        unsigned int mode;
+        unsigned long long mtime;
+        unsigned int size;
+        char path[sizeof(entry->path)];
+
+        if (sscanf(line, "%o %64s %llu %u %511[^\n]",
+                   &mode, hash_hex, &mtime, &size, path) != 5) {
+            fclose(f);
+            return -1;
+        }
+        if (hex_to_hash(hash_hex, &entry->hash) != 0) {
+            fclose(f);
+            return -1;
+        }
+
+        entry->mode = mode;
+        entry->mtime_sec = (uint64_t)mtime;
+        entry->size = size;
+        snprintf(entry->path, sizeof(entry->path), "%s", path);
+        index->count++;
+    }
+
+    fclose(f);
+    return 0;
+}
+
 // Serialize a Tree struct into binary format for storage.
 // Caller must free(*data_out).
 // Returns 0 on success, -1 on error.
