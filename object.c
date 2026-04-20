@@ -18,6 +18,10 @@
 #include <errno.h>
 #include <openssl/evp.h>
 
+#ifndef O_BINARY
+#define O_BINARY 0
+#endif
+
 // ─── PROVIDED ────────────────────────────────────────────────────────────────
 
 void hash_to_hex(const ObjectID *id, char *hex_out) {
@@ -157,7 +161,7 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
 
     char tmp_path[560];
     snprintf(tmp_path, sizeof(tmp_path), "%s.tmp.%ld", final_path, (long)getpid());
-    int fd = open(tmp_path, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+    int fd = open(tmp_path, O_CREAT | O_WRONLY | O_TRUNC | O_BINARY, 0644);
     if (fd < 0) {
         free(full);
         return -1;
