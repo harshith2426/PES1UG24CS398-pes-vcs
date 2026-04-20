@@ -295,12 +295,13 @@ int object_read(const ObjectID *id, ObjectType *type_out, void **data_out, size_
         return -1;
     }
 
-    void *payload = malloc(data_len ? data_len : 1);
+    void *payload = malloc(data_len + 1);
     if (!payload) {
         free(buffer);
         return -1;
     }
     if (data_len > 0) memcpy(payload, buffer + data_offset, data_len);
+    ((uint8_t *)payload)[data_len] = '\0';
 
     *data_out = payload;
     *len_out = data_len;
