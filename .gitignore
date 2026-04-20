@@ -2,6 +2,7 @@
 pes
 test_objects
 test_tree
+*.exe
 
 # Object files
 *.o
@@ -9,6 +10,8 @@ test_tree
 
 # PES repository (created during testing)
 .pes/
+evidence/
+test_sequence_lf.sh
 
 # Editor files
 *.swp
