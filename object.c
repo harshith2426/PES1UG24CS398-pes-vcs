@@ -138,6 +138,55 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
         return 0;
     }
 
+    char final_path[512];
+    object_path(id_out, final_path, sizeof(final_path));
+
+    char shard_dir[512];
+    snprintf(shard_dir, sizeof(shard_dir), "%s", final_path);
+    char *slash = strrchr(shard_dir, '/');
+    if (!slash) {
+        free(full);
+        return -1;
+    }
+    *slash = '\0';
+
+    if (mkdir(shard_dir, 0755) != 0 && errno != EEXIST) {
+        free(full);
+        return -1;
+    }
+
+    char tmp_path[560];
+    snprintf(tmp_path, sizeof(tmp_path), "%s.tmp.%ld", final_path, (long)getpid());
+    int fd = open(tmp_path, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+    if (fd < 0) {
+        free(full);
+        return -1;
+    }
+
+    size_t written_total = 0;
+    while (written_total < full_len) {
+        ssize_t written = write(fd, full + written_total, full_len - written_total);
+        if (written <= 0) {
+            close(fd);
+            unlink(tmp_path);
+            free(full);
+            return -1;
+        }
+        written_total += (size_t)written;
+    }
+
+    if (fsync(fd) != 0 || close(fd) != 0) {
+        unlink(tmp_path);
+        free(full);
+        return -1;
+    }
+
+    if (rename(tmp_path, final_path) != 0) {
+        unlink(tmp_path);
+        free(full);
+        return -1;
+    }
+
     free(full);
     return 0;
 }
