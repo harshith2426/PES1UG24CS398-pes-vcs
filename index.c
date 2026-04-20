@@ -231,6 +231,9 @@ int index_save(const Index *index) {
         return -1;
     }
 
+#ifdef _WIN32
+    unlink(INDEX_FILE);
+#endif
     return rename(tmp_path, INDEX_FILE);
 }
 
