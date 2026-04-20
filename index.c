@@ -26,6 +26,9 @@
 
 int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out);
 
+#define INDEX_MODE_FILE 0100644
+#define INDEX_MODE_EXEC 0100755
+
 static int compare_index_entries(const void *a, const void *b) {
     const IndexEntry *ea = (const IndexEntry *)a;
     const IndexEntry *eb = (const IndexEntry *)b;
@@ -277,5 +280,9 @@ int index_add(Index *index, const char *path) {
     }
 
     entry->hash = blob_id;
+    entry->mode = (st.st_mode & S_IXUSR) ? INDEX_MODE_EXEC : INDEX_MODE_FILE;
+    entry->mtime_sec = (uint64_t)st.st_mtime;
+    entry->size = (uint32_t)st.st_size;
+    snprintf(entry->path, sizeof(entry->path), "%s", path);
     return index_save(index);
 }
