@@ -176,6 +176,9 @@ int head_update(const ObjectID *new_commit) {
     fsync(fileno(f));
     fclose(f);
     
+#ifdef _WIN32
+    unlink(target_path);
+#endif
     return rename(tmp_path, target_path);
 }
 
